@@ -3,9 +3,11 @@ package com.pdev.rempms.recruitmentservice.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pdev.rempms.recruitmentservice.constants.AuthErrorMessages;
 import com.pdev.rempms.recruitmentservice.constants.ClaimsConstant;
+import com.pdev.rempms.recruitmentservice.constants.CommonConstants;
 import com.pdev.rempms.recruitmentservice.constants.RolePermissionsConstants;
 import com.pdev.rempms.recruitmentservice.exception.UnauthorizedException;
 import com.pdev.rempms.recruitmentservice.service.rest.kcs.KeyCloakClientService;
+import com.pdev.rempms.recruitmentservice.util.CommonValidation;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +22,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author @maleeshasa
@@ -56,6 +63,13 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         logger.info("JWTAuthenticationFilter.doFilterInternal() => started.");
 
         final String authHeader = request.getHeader("Authorization");
+
+        /**
+         * ignore service registry health check url
+         */
+        if (!request.getRequestURI().equalsIgnoreCase("/health/health-check")) {
+            logRequest(request);
+        }
 
         if (authHeader != null && authHeader.startsWith("Bearer")) {
             log.info("Validate the token token issuer using the Keycloak client service...");
@@ -129,5 +143,43 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         logger.info("Starting filter chain...");
         filterChain.doFilter(request, response);
         logger.info("JWTAuthenticationFilter.doFilterInternal() => ended.");
+    }
+
+    private void logRequest(HttpServletRequest request) {
+        Map<String, List<String>> headersMap = Collections.list(request.getHeaderNames()).stream().collect(Collectors.toMap(
+                Function.identity(), h -> Collections.list(request.getHeaders(h))));
+        log.info("[REQUEST] IpAddress: {} | URI: {} | Method: {} | Headers: {} ",
+                getClientIp(request)
+                , request.getRequestURI()
+                , request.getMethod()
+                , headersMap);
+    }
+
+    public String getClientIp(HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (CommonValidation.stringNullValidation(ipAddress) || CommonConstants.UNKNOWN.equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("Proxy-Client-IP");
+        }
+
+        if (CommonValidation.stringNullValidation(ipAddress) || CommonConstants.UNKNOWN.equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getHeader("WL-Proxy-Client-IP");
+        }
+
+        if (CommonValidation.stringNullValidation(ipAddress) || CommonConstants.UNKNOWN.equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getRemoteAddr();
+            try {
+                InetAddress inetAddress = InetAddress.getLocalHost();
+                ipAddress = inetAddress.getHostAddress();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+
+            }
+        }
+
+        if (!CommonValidation.stringNullValidation(ipAddress) && ipAddress.length() > 15 && ipAddress.indexOf(",") >= 1) {
+            ipAddress = ipAddress.substring(0, ipAddress.indexOf(","));
+        }
+
+        return ipAddress;
     }
 }
