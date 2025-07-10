@@ -1,12 +1,13 @@
 package com.pdev.rempms.recruitmentservice.service.impl.jobVacancy;
 
 import com.pdev.rempms.recruitmentservice.builder.UniqueNumberBuilder;
-import com.pdev.rempms.recruitmentservice.enums.DocumentType;
-import com.pdev.rempms.recruitmentservice.enums.FolderType;
-import com.pdev.rempms.recruitmentservice.dto.jobVacancy.JobVacancySavedLazyResponseDTO;
+import com.pdev.rempms.recruitmentservice.controller.response.PageResponse;
 import com.pdev.rempms.recruitmentservice.dto.document.upload.DocumentUploadResponseDTO;
 import com.pdev.rempms.recruitmentservice.dto.jobVacancy.JobVacancyRequest;
 import com.pdev.rempms.recruitmentservice.dto.jobVacancy.JobVacancyResponse;
+import com.pdev.rempms.recruitmentservice.dto.jobVacancy.JobVacancySavedLazyResponseDTO;
+import com.pdev.rempms.recruitmentservice.enums.DocumentType;
+import com.pdev.rempms.recruitmentservice.enums.FolderType;
 import com.pdev.rempms.recruitmentservice.exception.BaseException;
 import com.pdev.rempms.recruitmentservice.exception.RecordNotFoundException;
 import com.pdev.rempms.recruitmentservice.mapper.jobVacancy.JobVacancyMapper;
@@ -19,9 +20,12 @@ import com.pdev.rempms.recruitmentservice.repository.jobPosition.JobPositionRepo
 import com.pdev.rempms.recruitmentservice.repository.jobVacancy.JobVacancyRepository;
 import com.pdev.rempms.recruitmentservice.service.jobVacancy.JobVacancyService;
 import com.pdev.rempms.recruitmentservice.service.rest.document.DocumentClientService;
+import com.pdev.rempms.recruitmentservice.specification.JobVacancySpecification;
 import com.pdev.rempms.recruitmentservice.util.CommonResponse;
 import com.pdev.rempms.recruitmentservice.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -91,7 +95,7 @@ public class JobVacancyServiceImpl implements JobVacancyService {
             commonResponse.setStatus(HttpStatus.OK);
             commonResponse.setMessage("Job vacancy is saved success.");
             commonResponse.setData(new JobVacancySavedLazyResponseDTO(savedObj.getId(), savedObj.getJobPosition().getPosition(),
-                    savedObj.getEmployer().getEmployerName(), savedObj.getEmployer().getEmployerNo(), savedObj.isActive(),
+                    savedObj.getEmployer().getEmployerName(), savedObj.getEmployer().getEmployerNo(), savedObj.getActive(),
                     savedObj.getRefNo(), savedObj.getPosterName()));
 
         } catch (Exception e) {
@@ -157,4 +161,27 @@ public class JobVacancyServiceImpl implements JobVacancyService {
         return commonResponse;
     }
 
+    @Override
+    public CommonResponse search(JobVacancyRequest request, PageRequest of) {
+        try {
+            Page<JobVacancy> vacancies = jobVacancyRepository.findAll(JobVacancySpecification.getSpecs(request), of);
+
+            // Page response
+            PageResponse pageResponse = new PageResponse();
+            pageResponse.setCurrentPage(vacancies.getNumber());
+            pageResponse.setTotalPages(vacancies.getTotalPages());
+            pageResponse.setTotalElements(vacancies.getTotalElements());
+            pageResponse.setDataList(jobVacancyMapper.mapToDTOs(vacancies.getContent()));
+
+            // common response
+            CommonResponse commonResponse = new CommonResponse();
+            commonResponse.setData(pageResponse);
+            commonResponse.setStatus(HttpStatus.OK);
+            commonResponse.setMessage("Searched job vacancies result.");
+            return commonResponse;
+
+        } catch (Exception e) {
+            throw new BaseException(500, "Searching job vacancies failed.");
+        }
+    }
 }

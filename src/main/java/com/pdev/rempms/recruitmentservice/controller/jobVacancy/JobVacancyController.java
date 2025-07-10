@@ -4,6 +4,7 @@ import com.pdev.rempms.recruitmentservice.dto.jobVacancy.JobVacancyRequest;
 import com.pdev.rempms.recruitmentservice.service.jobVacancy.JobVacancyService;
 import com.pdev.rempms.recruitmentservice.util.CommonResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,4 +37,10 @@ public class JobVacancyController {
         return ResponseEntity.ok(jobVacancyService.getAll());
     }
 
+    @PostMapping(value = "/search")
+    public ResponseEntity<CommonResponse> search(@RequestBody JobVacancyRequest request,
+                                                 @RequestParam(value = "page", defaultValue = "0") int page,
+                                                 @RequestParam(value = "size", defaultValue = "10") int size) {
+        return ResponseEntity.ok(jobVacancyService.search(request, PageRequest.of(page, size)));
+    }
 }

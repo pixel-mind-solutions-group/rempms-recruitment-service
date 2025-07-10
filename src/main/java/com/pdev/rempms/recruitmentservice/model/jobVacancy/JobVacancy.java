@@ -34,16 +34,16 @@ public class JobVacancy {
     private LocalDate closingDate;
 
     @Column(name = "is_govt_job")
-    private boolean govtJob;
+    private Boolean govtJob;
 
     @Column(name = "is_walks_in_interview")
-    private boolean walksInInterview;
+    private Boolean walksInInterview;
 
     @Column(name = "is_part_time")
-    private boolean partTime;
+    private Boolean partTime;
 
     @Column(name = "active")
-    private boolean active;
+    private Boolean active;
 
     @Column(name = "poster_location_url")
     private String posterUrl;
